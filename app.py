@@ -27,7 +27,7 @@ def stream( path ):
         #TODO: more detailed error throwing
         abort(400)
 
-    ff_path = os.path.realpath(__file__)
+    ff_path = os.path.dirname(os.path.realpath(__file__))
     ff_path = os.path.join( ff_path, ".heroku/vendor/ffmpeg/bin/ffmpeg")
 
     yt_args = [ "youtube-dl", "-f", "140", "-q", "--output", "-", youtube_id ]
