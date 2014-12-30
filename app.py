@@ -5,6 +5,7 @@ import requests
 import urlparse 
 import sys
 import re
+import os
 
 app = Flask(__name__)
 app.debug = True
@@ -26,8 +27,11 @@ def stream( path ):
         #TODO: more detailed error throwing
         abort(400)
 
+    ff_path = os.path.realpath(__file__)
+    ff_path = os.path.join( ff_path, ".heroku/vendor/ffmpeg/bin/ffmpeg")
+
     yt_args = [ "youtube-dl", "-f", "140", "-q", "--output", "-", youtube_id ]
-    ff_args = [ "ffmpeg", "-i", "-", "-loglevel", "quiet", "-acodec", "copy", "-f", "adts", "-" ]
+    ff_args = [ ff_path, "-i", "-", "-loglevel", "quiet", "-acodec", "copy", "-f", "adts", "-" ]
 
     yt_proc = subprocess.Popen( yt_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
     ff_proc = subprocess.Popen( ff_args, stdin=yt_proc.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
