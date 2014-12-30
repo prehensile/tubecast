@@ -7,37 +7,37 @@ var getParameterByName = function ( name, urlString ) {
     name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
     var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
         results = regex.exec( urlString );
-    return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+    return results === null ? null : decodeURIComponent(results[1].replace(/\+/g, " "));
 }
 
 var idFromInput = function(){
 	input = $("#urlBox").val();
-
-	console.log( input );
-
+	var id = null;
 	if( isAlpha(input) ) {
 		return input;
 	}
 	else {
-		var id = getParameterByName( "list", input );
-		return id;
+		id = getParameterByName( "list", input );
 	}
-	return null;
+	return id;
 }
 
+var redirectToFeed = function( protocol ){
+	var id = idFromInput();
+	if( id ) {
+		window.location = protocol + feedURL + id;
+	}
+	// TODO: notify user on bad input
+}
 
 $(function(){
-
 	var feedURL = window.location.host + "/feed/";
-
 	$("#btniTunes").click( function(e){
 		e.preventDefault();
-		window.location = "itpc://" + feedURL + idFromInput();
+		redirectToFeed( "itpc" );
 	});
-
 	$("#btnFeed").click( function(e){
 		e.preventDefault();
-		window.location = "http://" + feedURL + idFromInput();
+		redirectToFeed( "http" );
 	});
-
 });
