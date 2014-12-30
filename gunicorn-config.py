@@ -1,4 +1,4 @@
-workers = 4
+workers = 3
 timeout = 30
 preload_app = True
 debug = True
