@@ -62,13 +62,21 @@ def stream( path ):
                 streamed += len(d)
                 if len(d) < buf_size:
                     finished = True
-        if yt_proc is not None:
-            yt_proc.kill()
         if ff_proc is not None:
-            ff_proc.kill()
+            print "--> kill ffmpeg"
+            ff_proc.wait()
+            #ff_proc.terminate()
+        if yt_proc is not None:
+            print "--> kill youtube-dl"
+            #yt_proc.terminate()
+            yt_proc.wait()
         print "-> stream ended. Streamed %d bytes." % streamed
 
-    return Response( stream(), mimetype='audio/aac' )
+    filename = "%s.adts" % youtube_id
+    return Response( stream(),
+                        mimetype='audio/aac-adts',
+                        headers={"Content-Disposition":
+                                    "attachment;filename=%s"%filename} )
     
 def parse_playlist( playlist_id ):
 
