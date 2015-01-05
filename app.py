@@ -27,39 +27,49 @@ def stream( path ):
         #TODO: more detailed error throwing
         abort(400)
 
-    
+    # construct path to heroku vended ffmpeg first...
     ff_path = os.path.dirname(os.path.realpath(__file__))
     ff_path = os.path.join( ff_path, ".heroku/vendor/ffmpeg/bin/ffmpeg")
+    ## ...fall back to assuming it's in the system path
+    if not os.path.exists( ff_path ):
+        ff_path = "ffmpeg"
 
     yt_args = [ "youtube-dl", "-f", "140", "-q", "--output", "-", youtube_id ]
-    ff_args = [ ff_path, "-i", "-", "-loglevel", "quiet", "-acodec", "copy", "-f", "adts", "-" ]
+    #ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-acodec", "copy", "-f", "mp4", "-" ]
+    ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "adts", "-" ]
 
-    yt_proc = None
-    ff_proc = None
-    try:
-        yt_proc = subprocess.Popen( yt_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-        ff_proc = subprocess.Popen( ff_args, stdin=yt_proc.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-    except:
-        pass
+    print " ".join(yt_args)
+    print " ".join(ff_args)
 
-    # stream ffmpeg output to browser if all is well
-    if (yt_proc is not None) and (ff_proc is not None):
-        def stream( proc ):
-            buf_size = 1024
-            while True:
-                d = proc.stdout.read( buf_size )
+    def stream():
+        yt_proc = None
+        ff_proc = None
+        try:
+            yt_proc = subprocess.Popen( yt_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+            ff_proc = subprocess.Popen( ff_args, stdin=yt_proc.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        except:
+            pass
+        buf_size = 1024
+        finished = False
+        streamed = 0
+        print "yt_proc: %s" % yt_proc
+        print "ff_proc: %s" % ff_proc
+        if (yt_proc is not None) and (ff_proc is not None):
+            print "-> begin streaming..."
+            while not finished:
+                d = ff_proc.stdout.read( buf_size )
                 yield d
+                streamed += len(d)
                 if len(d) < buf_size:
-                    break
-        return Response( stream( ff_proc ), mimetype='audio/mp4' )
-    
-    # fail state
-    if ff_proc is not None:
-        ff_proc.kill()
-    if yt_proc is not None:
-        yt_proc.kill()
-    abort(500)
+                    finished = True
+        if yt_proc is not None:
+            yt_proc.kill()
+        if ff_proc is not None:
+            ff_proc.kill()
+        print "-> stream ended. Streamed %d bytes." % streamed
 
+    return Response( stream(), mimetype='audio/aac' )
+    
 def parse_playlist( playlist_id ):
 
     feed_url = "http://gdata.youtube.com/feeds/api/playlists/" + playlist_id
