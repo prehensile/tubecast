@@ -36,7 +36,12 @@ def stream( path ):
 
     yt_args = [ "youtube-dl", "-f", "140", "-q", "--output", "-", youtube_id ]
     #ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-acodec", "copy", "-f", "mp4", "-" ]
-    ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "adts", "-" ]
+    #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "adts", "-" ]
+    ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "mp4", "-movflags", "frag_keyframe", "-frag_size", "1024", "-" ]
+    mimetype = "audio/m4a"
+    filename = "%s.m4a" % youtube_id
+    # filename = "%s.adts" % youtube_id
+    #'audio/aac-adts'
 
     print " ".join(yt_args)
     print " ".join(ff_args)
@@ -72,9 +77,8 @@ def stream( path ):
             yt_proc.wait()
         print "-> stream ended. Streamed %d bytes." % streamed
 
-    filename = "%s.adts" % youtube_id
     return Response( stream(),
-                        mimetype='audio/aac-adts',
+                        mimetype=mimetype,
                         headers={"Content-Disposition":
                                     "attachment;filename=%s"%filename} )
     
