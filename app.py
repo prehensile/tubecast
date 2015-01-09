@@ -35,11 +35,12 @@ def stream( path ):
         ff_path = "ffmpeg"
 
     yt_args = [ "youtube-dl", "-f", "140", "-q", "--output", "-", youtube_id ]
-    #ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-acodec", "copy", "-f", "mp4", "-" ]
+    ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-vn", "-acodec", "libfaac", "-f", "adts", "-" ]
     #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "adts", "-" ]
-    ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "mp4", "-movflags", "frag_keyframe", "-frag_size", "1024", "-" ]
-    mimetype = "audio/m4a"
-    filename = "%s.m4a" % youtube_id
+    #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "mp4", "-movflags", "frag_keyframe", "-frag_size", "1024", "-" ]
+    #mimetype = "audio/m4a"
+    mimetype = "audio/x-hx-aac-adts"
+    filename = "%s.adts" % youtube_id
     # filename = "%s.adts" % youtube_id
     #'audio/aac-adts'
 
