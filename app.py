@@ -47,8 +47,8 @@ def stream( path ):
     ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-vn", "-acodec", acodec, "-f", "adts", "-" ]
     #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "adts", "-" ]
     #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "mp4", "-movflags", "frag_keyframe", "-frag_size", "1024", "-" ]
-    filename = "%s.aac" % youtube_id
-    # filename = "%s.adts" % youtube_id
+    #filename = "%s.aac" % youtube_id
+    filename = "%s.adts" % youtube_id
 
     print " ".join(yt_args)
     print " ".join(ff_args)
