@@ -3,12 +3,15 @@ from bs4 import BeautifulSoup as bs
 from flask import Flask, Response, url_for, render_template, abort
 import requests
 import urlparse 
-import sys
+import sys, os
 import re
-import os
+import datetime, time
+from email import utils
 
 app = Flask(__name__)
 app.debug = True
+app.config['MIME_TYPE'] = "audio/aac-adts"
+#mimetype = "audio/m4a"
 
 @app.route('/')
 def index():
@@ -38,11 +41,8 @@ def stream( path ):
     ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-vn", "-acodec", "libfaac", "-f", "adts", "-" ]
     #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "adts", "-" ]
     #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "mp4", "-movflags", "frag_keyframe", "-frag_size", "1024", "-" ]
-    #mimetype = "audio/m4a"
-    mimetype = "audio/x-hx-aac-adts"
-    filename = "%s.adts" % youtube_id
+    filename = "%s.aac" % youtube_id
     # filename = "%s.adts" % youtube_id
-    #'audio/aac-adts'
 
     print " ".join(yt_args)
     print " ".join(ff_args)
@@ -58,8 +58,6 @@ def stream( path ):
         buf_size = 1024
         finished = False
         streamed = 0
-        print "yt_proc: %s" % yt_proc
-        print "ff_proc: %s" % ff_proc
         if (yt_proc is not None) and (ff_proc is not None):
             print "-> begin streaming..."
             while not finished:
@@ -82,7 +80,16 @@ def stream( path ):
                         mimetype=mimetype,
                         headers={"Content-Disposition":
                                     "attachment;filename=%s"%filename} )
-    
+def format_duration( seconds ):
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    return "%d:%02d:%02d" % (h, m, s)    
+
+def format_date( datestring ):
+    # 2008-12-24T00:46:17.000Z
+    dt = datetime.datetime.strptime( datestring, "%Y-%m-%dT%H:%M:%S.%fZ" )
+    return utils.formatdate( time.mktime(dt.timetuple()) )
+
 def parse_playlist( playlist_id ):
 
     feed_url = "http://gdata.youtube.com/feeds/api/playlists/" + playlist_id
@@ -94,13 +101,15 @@ def parse_playlist( playlist_id ):
 
     feed = soup.find("feed")
     
+    channel_author = feed.find("author")
+
     channel_out["self_url"] = url_for( "feed", path=playlist_id, _external=True )
-    
     channel_out["title"] = feed.find("title").string
     channel_out["link"] = feed.find( "link", rel="alternate" ).attrs["href"]
     channel_out["description"] = feed.find("subtitle").string
-    channel_out["last_updated"] = feed.find("updated").string
-    channel_out["author"] = feed.find("author")
+    channel_out["last_updated"] = format_date( feed.find("updated").string )
+    channel_out["author"] = channel_author
+    channel_out["author_name"] = channel_author.find("name").text
 
     for entry_tag in soup.find_all( "entry" ):
 
@@ -110,6 +119,8 @@ def parse_playlist( playlist_id ):
         media_group = entry_tag.find( "media:group" )
         media_player = media_group.find( "media:player" )
         player_url = media_player.attrs[ "url" ]
+        item_author = entry_tag.find("author")
+        item_duration = media_group.find( "media:content" ).attrs["duration"]
         
         # get youtube item id from player url
         parsed = urlparse.urlparse( player_url )
@@ -118,18 +129,22 @@ def parse_playlist( playlist_id ):
         
         # construct item dict
         this_item["title"] = entry_tag.find("title").string
-        this_item["pub_date"] = entry_tag.find("published").string
+        this_item["pub_date"] = format_date( entry_tag.find("published").string )
         this_item["guid"] = entry_tag.find("id").string
         this_item["content"] = entry_tag.find("content").string
         
         this_item["link"] = entry_tag.find( "link", rel="alternate" ).attrs["href"]
         this_item["media_url"] = url_for( "stream", path=yt_id, _external=True )
 
-        this_item["author"] = entry_tag.find("author")
+        this_item["author"] = item_author
+        this_item["author_name"] = item_author.find("name").text
         this_item["categories"] = entry_tag.find_all("category")
 
-        this_item["duration"] = media_group.find( "media:content" ).attrs["duration"]
+        this_item["duration"] = item_duration
         this_item["description"] = media_group.find( "media:description" ).string
+
+        this_item["mime_type"] = app.config["MIME_TYPE"]
+        this_item["it_duration"] = format_duration( int(item_duration) )
         
         items_out.append( this_item )
 
@@ -152,7 +167,9 @@ def feed( path ):
         #TODO: better error handling
         abort(500)
     
-    return render_template( "feed.xml", channel=channel, items=items )
+    return render_template( "feed.xml",
+                            channel=channel,
+                            items=items )
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:

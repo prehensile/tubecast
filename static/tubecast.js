@@ -23,15 +23,16 @@ var idFromInput = function(){
 }
 
 var redirectToFeed = function( protocol ){
+	var feedURL = window.location.host + "/feed/";
 	var id = idFromInput();
 	if( id ) {
-		window.location = protocol + feedURL + id;
+		window.location = protocol + "://" + feedURL + id;
+	} else {
+		$("#formPlaylist").toggleClass( "has-error", true );
 	}
-	// TODO: notify user on bad input
 }
 
 $(function(){
-	var feedURL = window.location.host + "/feed/";
 	$("#btniTunes").click( function(e){
 		e.preventDefault();
 		redirectToFeed( "itpc" );
@@ -39,5 +40,8 @@ $(function(){
 	$("#btnFeed").click( function(e){
 		e.preventDefault();
 		redirectToFeed( "http" );
+	});
+	$("#urlBox").focusin( function(e){
+		$("#formPlaylist").toggleClass( "has-error", false );
 	});
 });
