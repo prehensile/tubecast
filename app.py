@@ -11,6 +11,7 @@ from email import utils
 app = Flask(__name__)
 app.debug = True
 app.config['MIME_TYPE'] = "audio/aac-adts"
+#app.config['MIME_TYPE'] = "audio/aac"
 #mimetype = "audio/m4a"
 
 @app.route('/')
@@ -33,12 +34,17 @@ def stream( path ):
     # construct path to heroku vended ffmpeg first...
     ff_path = os.path.dirname(os.path.realpath(__file__))
     ff_path = os.path.join( ff_path, ".heroku/vendor/ffmpeg/bin/ffmpeg")
+    is_heroku = True
     ## ...fall back to assuming it's in the system path
     if not os.path.exists( ff_path ):
         ff_path = "ffmpeg"
+        is_heroku = False
 
+    acodec = "libvo_aacenc"
+    if is_heroku:
+        acodec = "libfaac"
     yt_args = [ "youtube-dl", "-f", "140", "-q", "--output", "-", youtube_id ]
-    ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-vn", "-acodec", "libfaac", "-f", "adts", "-" ]
+    ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-vn", "-acodec", acodec, "-f", "adts", "-" ]
     #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "adts", "-" ]
     #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "mp4", "-movflags", "frag_keyframe", "-frag_size", "1024", "-" ]
     filename = "%s.aac" % youtube_id
@@ -77,9 +83,10 @@ def stream( path ):
         print "-> stream ended. Streamed %d bytes." % streamed
 
     return Response( stream(),
-                        mimetype=mimetype,
+                        mimetype=app.config['MIME_TYPE'],
                         headers={"Content-Disposition":
-                                    "attachment;filename=%s"%filename} )
+                                    "attachment;filename=%s"%filename}
+                    )
 def format_duration( seconds ):
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
