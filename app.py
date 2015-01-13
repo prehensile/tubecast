@@ -1,18 +1,115 @@
 import subprocess
 from bs4 import BeautifulSoup as bs
-from flask import Flask, Response, url_for, render_template, abort
+from flask import Flask, Response, url_for, render_template, abort, request
 import requests
 import urlparse 
-import sys, os
+import sys, os, signal
 import re
 import datetime, time
 from email import utils
+from werkzeug.wrappers import Response as ResponseBase
+
+class StreamingResponse( ResponseBase ):
+    
+    def __init__( self, youtube_id ):
+        
+        # construct path to heroku vended ffmpeg first...
+        ff_path = os.path.dirname(os.path.realpath(__file__))
+        ff_path = os.path.join( ff_path, ".heroku/vendor/ffmpeg/bin/ffmpeg")
+        is_heroku = True
+        ## ...fall back to assuming it's in the system path
+        if not os.path.exists( ff_path ):
+            ff_path = "ffmpeg"
+            is_heroku = False
+
+        acodec = "libmp3lame"
+        #acodec = "libvo_aacenc"
+        # if is_heroku:
+        #     acodec = "libfaac"
+        yt_args = [ "youtube-dl", "-f", "140", "-q", "--output", "-", youtube_id ]
+        ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-acodec", acodec, "-ab", "128k", "-ac", "2", "-ar", "44100", "-f", "mp3", "-" ]
+        #ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-vn", "-acodec", acodec, "-f", "adts", "-" ]
+        #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "adts", "-" ]
+        #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "mp4", "-movflags", "frag_keyframe", "-frag_size", "1024", "-" ]
+        #filename = "%s.aac" % youtube_id
+        #filename = "%s.adts" % youtube_id
+        filename = "%s.mp3" % youtube_id
+
+        print " ".join(yt_args)
+        print " ".join(ff_args)
+
+        self._ff_proc = None
+        self._yt_proc = None
+        try:
+            self._yt_proc = subprocess.Popen( yt_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setsid )
+        except:
+            pass
+        try:
+            self._ff_proc = subprocess.Popen( ff_args, stdin=self._yt_proc.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setsid )    
+        except:
+            pass
+
+        def stream():
+            buf_size = 1024
+            finished = False
+            streamed = 0
+            print "-> begin streaming..."
+            while not finished:
+                d = self._ff_proc.stdout.read( buf_size )
+                yield d
+                streamed += len(d)
+                if len(d) < buf_size:
+                    finished = True
+            print "-> stream ended. Streamed %d bytes." % streamed
+
+        response = None
+        status = 500
+        mimetype = None
+        response = "Error"
+        
+        if (self._yt_proc is not None) and (self._ff_proc is not None):
+            response = stream()
+            status = 200
+            mimetype = app.config['MIME_TYPE']
+
+        super( StreamingResponse, self ).__init__( response=response,
+                                                    status=status,
+                                                    headers=None,
+                                                    mimetype=mimetype,
+                                                    content_type=None,
+                                                    direct_passthrough=False ) 
+
+        self.call_on_close( self.kill_threads )
+
+    def kill_threads( self ):
+        print "kill_threads, _ff_proc=%s, _yt_proc=%s" % ( self._ff_proc, self._yt_proc ) 
+        if self._ff_proc is not None:
+            print "--> kill ffmpeg"
+            #self._ff_proc.wait()
+            #self._ff_proc.terminate()
+            try:
+                os.killpg( self._ff_proc.pid, signal.SIGKILL )
+            except Exception, e:
+                self._ff_proc.kill()
+                pass
+            self._ff_proc = None
+        if self._yt_proc is not None:
+            print "--> kill youtube-dl"
+            #self._yt_proc.wait()
+            #self._yt_proc.terminate()
+            try:
+                os.killpg( self._yt_proc.pid, signal.SIGKILL )
+            except Exception, e:
+                self._yt_proc.kill()
+            self._yt_proc = None
+        print "kill_threads FINISHED"
 
 app = Flask(__name__)
 app.debug = True
-app.config['MIME_TYPE'] = "audio/aac-adts"
+#app.config['MIME_TYPE'] = "audio/aac-adts"
 #app.config['MIME_TYPE'] = "audio/aac"
 #mimetype = "audio/m4a"
+app.config['MIME_TYPE'] = "audio/mp3"
 
 @app.route('/')
 def index():
@@ -21,6 +118,17 @@ def index():
 @app.route('/stream/<path:path>')
 def stream( path ):
     
+    mimetype = app.config['MIME_TYPE']
+    
+    # don't start streaming until we've been asked properly for audio data
+    if request.accept_mimetypes[ mimetype ] < 1:
+        print "-> return dummy stream"
+        def stream():
+            yield '0'
+        return Response( stream(), mimetype=mimetype )
+
+    print "content accepted"
+
     path_components = path.split("/")
     if len(path_components) < 1:
         #TODO: more detailed error throwing
@@ -31,62 +139,9 @@ def stream( path ):
         #TODO: more detailed error throwing
         abort(400)
 
-    # construct path to heroku vended ffmpeg first...
-    ff_path = os.path.dirname(os.path.realpath(__file__))
-    ff_path = os.path.join( ff_path, ".heroku/vendor/ffmpeg/bin/ffmpeg")
-    is_heroku = True
-    ## ...fall back to assuming it's in the system path
-    if not os.path.exists( ff_path ):
-        ff_path = "ffmpeg"
-        is_heroku = False
+    r = StreamingResponse( youtube_id=youtube_id )
+    return r
 
-    acodec = "libvo_aacenc"
-    if is_heroku:
-        acodec = "libfaac"
-    yt_args = [ "youtube-dl", "-f", "140", "-q", "--output", "-", youtube_id ]
-    ff_args = [ ff_path, "-loglevel", "quiet", "-i", "-", "-vn", "-acodec", acodec, "-f", "adts", "-" ]
-    #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "adts", "-" ]
-    #ff_args = [ ff_path, "-i", "-", "-acodec", "copy", "-vn", "-f", "mp4", "-movflags", "frag_keyframe", "-frag_size", "1024", "-" ]
-    #filename = "%s.aac" % youtube_id
-    filename = "%s.adts" % youtube_id
-
-    print " ".join(yt_args)
-    print " ".join(ff_args)
-
-    def stream():
-        yt_proc = None
-        ff_proc = None
-        try:
-            yt_proc = subprocess.Popen( yt_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-            ff_proc = subprocess.Popen( ff_args, stdin=yt_proc.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-        except:
-            pass
-        buf_size = 1024
-        finished = False
-        streamed = 0
-        if (yt_proc is not None) and (ff_proc is not None):
-            print "-> begin streaming..."
-            while not finished:
-                d = ff_proc.stdout.read( buf_size )
-                yield d
-                streamed += len(d)
-                if len(d) < buf_size:
-                    finished = True
-        if ff_proc is not None:
-            print "--> kill ffmpeg"
-            ff_proc.wait()
-            #ff_proc.terminate()
-        if yt_proc is not None:
-            print "--> kill youtube-dl"
-            #yt_proc.terminate()
-            yt_proc.wait()
-        print "-> stream ended. Streamed %d bytes." % streamed
-
-    return Response( stream(),
-                        mimetype=app.config['MIME_TYPE'],
-                        headers={"Content-Disposition":
-                                    "attachment;filename=%s"%filename}
-                    )
 def format_duration( seconds ):
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
