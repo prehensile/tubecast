@@ -74,7 +74,7 @@ class StreamingResponse( ResponseBase ):
 
         super( StreamingResponse, self ).__init__( response=response,
                                                     status=status,
-                                                    headers=None,
+                                                    headers={'Content-Disposition' : 'attachment; filename=%s' % filename},
                                                     mimetype=mimetype,
                                                     content_type=None,
                                                     direct_passthrough=False ) 
@@ -109,7 +109,8 @@ app.debug = True
 #app.config['MIME_TYPE'] = "audio/aac-adts"
 #app.config['MIME_TYPE'] = "audio/aac"
 #mimetype = "audio/m4a"
-app.config['MIME_TYPE'] = "audio/mp3"
+#app.config['MIME_TYPE'] = "audio/mp3"
+app.config['MIME_TYPE'] = "audio/mpeg"
 
 @app.route('/')
 def index():
