@@ -109,10 +109,6 @@ class StreamingResponse( ResponseBase ):
 
 app = Flask(__name__)
 app.debug = True
-#app.config['MIME_TYPE'] = "audio/aac-adts"
-#app.config['MIME_TYPE'] = "audio/aac"
-#mimetype = "audio/m4a"
-#app.config['MIME_TYPE'] = "audio/mp3"
 app.config['MIME_TYPE'] = "audio/mpeg"
 
 @app.route('/')
