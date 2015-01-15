@@ -92,6 +92,7 @@ class StreamingResponse( ResponseBase ):
             except Exception, e:
                 self._ff_proc.kill()
                 pass
+            del self._ff_proc
             self._ff_proc = None
         if self._yt_proc is not None:
             print "--> kill youtube-dl"
@@ -101,6 +102,7 @@ class StreamingResponse( ResponseBase ):
                 os.killpg( self._yt_proc.pid, signal.SIGKILL )
             except Exception, e:
                 self._yt_proc.kill()
+            del self._yt_proc
             self._yt_proc = None
         print "kill_threads FINISHED"
 

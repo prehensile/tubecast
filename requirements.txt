@@ -6,4 +6,4 @@ Jinja2==2.7.3
 MarkupSafe==0.23
 requests==2.5.1
 Werkzeug==0.9.6
-youtube-dl==2014.11.16
+youtube-dl==2015.1.15.1
