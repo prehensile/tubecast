@@ -11,18 +11,18 @@
 >
 
 <channel>
-    <title>tubecast: {{ channel.title }}</title>
+    <title>{{ channel.title }}</title>
     <atom:link href="{{ channel.self_url }}" rel="self" type="application/rss+xml" />
     <link>{{ channel.link }}</link>
-    <description>{{ channel.description }}</description>
+    <description><![CDATA[{{ channel.description }}]]></description>
     <lastBuildDate>{{ channel.last_updated }}</lastBuildDate>
     <language>en-US</language>
     <sy:updatePeriod>hourly</sy:updatePeriod>
     <sy:updateFrequency>1</sy:updateFrequency>
     <generator>https://github.com/prehensile/tubecast</generator>
     <copyright>Rights are held by the original uploaders</copyright>
-    <managingEditor>{{ channel.admin_email }}</managingEditor>
-    <webMaster>{{ channel.admin_email }}</webMaster>
+    <managingEditor>{{ channel.admin_email }} ({{ channel.author_name }})</managingEditor>
+    <webMaster>{{ channel.admin_email }} ({{ channel.author_name }})</webMaster>
     <ttl>1440</ttl>
     <image>
         <url>{{ channel.image_url }}</url>
@@ -31,10 +31,11 @@
         <width>{{ channel.image_width }}</width>
         <height>{{ channel.image_height }}</height>
     </image>
-    <itunes:subtitle>{{ channel.subtitle }}</itunes:subtitle>
-    <itunes:summary>{{ channel.description }}</itunes:summary>
+    <itunes:subtitle><![CDATA[{{ channel.subtitle }}]]></itunes:subtitle>
+    <itunes:summary><![CDATA[{{ channel.description }}]]></itunes:summary>
     <itunes:keywords>{{ channel.keywords }}</itunes:keywords>
-    {% for category in channel.categories %}<itunes:category text="{{ category }}" />{% endfor %}
+    {% for category in channel.categories %}
+    <itunes:category text="{{ category }}" />{% endfor %}
     <itunes:author>{{ channel.author_name }}</itunes:author>
     <itunes:owner>
         <itunes:name>{{ channel.author_name }}</itunes:name>
@@ -42,7 +43,7 @@
     </itunes:owner>
     <itunes:block>no</itunes:block>
     <itunes:explicit>no</itunes:explicit>
-    <itunes:image href="{{ channel.image_url }}" />
+    <itunes:image href="{{ channel.it_image_url }}" />
     {% for item in items %}<item>
         <title>{{ item.title }}</title>
         <link>{{ item.link }}</link>
@@ -54,8 +55,8 @@
         <content:encoded><![CDATA[{{ item.description }}]]></content:encoded>
         <enclosure url="{{ item.media_url }}" length="{{ item.length }}" type="{{ item.mime_type }}" />
         <itunes:duration>{{ item.it_duration }}</itunes:duration>
-        <itunes:subtitle>{{ item.subtitle }}</itunes:subtitle>
-        <itunes:summary>{{ item.description }}</itunes:summary>
+        <itunes:subtitle><![CDATA[{{ item.subtitle }}]]></itunes:subtitle>
+        <itunes:summary><![CDATA[{{ item.description }}]]></itunes:summary>
         {% for keyword in item.keywords %}<itunes:keywords>{{ keyword }}</itunes:keywords>{% endfor %}
         <itunes:author>{{ item.author_name }}</itunes:author>
         <itunes:explicit>no</itunes:explicit>

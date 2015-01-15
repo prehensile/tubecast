@@ -8,6 +8,7 @@ import re
 import datetime, time
 from email import utils
 from werkzeug.wrappers import Response as ResponseBase
+from itunes_categories import valid_categories
 
 class StreamingResponse( ResponseBase ):
     
@@ -156,11 +157,12 @@ def format_date( datestring ):
     return utils.formatdate( time.mktime(dt.timetuple()) )
 
 def parse_categories( tag ):
-    categories = tag.find_all( "category", scheme="http://gdata.youtube.com/schemas/2007/categories.cat" )
-    # categories_out = []
-    # for category in categories:
-    #     categories_out.append( category.attrs["term"] )
-    return [ category.attrs["term"] for category in categories ]
+    tags = tag.find_all( "category",
+        scheme="http://gdata.youtube.com/schemas/2007/categories.cat",
+        recursive=False )
+    categories = [ ctag.attrs["term"] for ctag in tags ]
+    categories = [ category for category in categories if category in valid_categories ]
+    return categories
 
 def parse_playlist( playlist_id ):
 
@@ -174,10 +176,23 @@ def parse_playlist( playlist_id ):
     feed = soup.find("feed")
     
     channel_author = feed.find("author")
+    channel_title = "tubecast: %s" % feed.find("title").string
+    channel_subtitle = feed.find("subtitle")
+    if channel_subtitle is not None:
+        channel_subtitle = channel_subtitle.string
+        if (channel_subtitle is not None) and (len(channel_subtitle) > 255):
+            channel_subtitle = channel_subtitle[:255]
+    if channel_subtitle is None:
+        channel_subtitle = ""
 
-    channel_out["self_url"] = url_for( "feed", path=playlist_id, _external=True )
-    channel_out["title"] = feed.find("title").string
-    channel_out["subtitle"] = feed.find("subtitle").string
+    self_url = None
+    try:
+        self_url = url_for( "feed", path=playlist_id, _external=True )
+    except Exception, e:
+        pass
+    channel_out["self_url"] = self_url
+    channel_out["title"] = channel_title
+    channel_out["subtitle"] = channel_subtitle
     channel_out["link"] = feed.find( "link", rel="alternate" ).attrs["href"]
     channel_out["description"] = feed.find("subtitle").string
     channel_out["last_updated"] = format_date( feed.find("updated").string )
@@ -185,10 +200,13 @@ def parse_playlist( playlist_id ):
     channel_out["author_name"] = channel_author.find("name").text
     channel_out["admin_email"] = "tubecast@prehensile.net"
 
-    thumbnail = feed.find("media:group").find( "media:thumbnail", attrs={ "yt:name" : "hqdefault" } )
+    thumbnail = feed.find("media:group").find( "media:thumbnail", attrs={ "yt:name" : "default" } )
     channel_out["image_url"] = thumbnail["url"]
     channel_out["image_width"] = thumbnail["width"]
     channel_out["image_height"] = thumbnail["height"]
+
+    it_image = feed.find("media:group").find( "media:thumbnail", attrs={ "yt:name" : "hqdefault" } )
+    channel_out["it_image_url"] = it_image["url"]
 
     channel_out["keywords"] = ",".join([ "tubecast" ])
     channel_out["categories"] = parse_categories( feed )
@@ -218,7 +236,12 @@ def parse_playlist( playlist_id ):
         this_item["content"] = entry_tag.find("content").string
         
         this_item["link"] = entry_tag.find( "link", rel="alternate" ).attrs["href"]
-        this_item["media_url"] = url_for( "stream", path=yt_id, _external=True )
+        media_url = None
+        try:
+            media_url = url_for( "stream", path=yt_id, _external=True )
+        except Exception, e:
+            pass
+        this_item["media_url"] = media_url
         this_item["length"] = 0
 
         this_item["author"] = item_author
@@ -255,7 +278,8 @@ def feed( path ):
     
     return render_template( "feed_itunes.xml",
                             channel=channel,
-                            items=items )
+                            items=items,
+                            mimetype="application/xml" )
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
