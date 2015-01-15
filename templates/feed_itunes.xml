@@ -14,7 +14,7 @@
     <title>{{ channel.title }}</title>
     <atom:link href="{{ channel.self_url }}" rel="self" type="application/rss+xml" />
     <link>{{ channel.link }}</link>
-    <description><![CDATA[{{ channel.description }}]]></description>
+    <description>{{ channel.description }}</description>
     <lastBuildDate>{{ channel.last_updated }}</lastBuildDate>
     <language>en-US</language>
     <sy:updatePeriod>hourly</sy:updatePeriod>
@@ -31,8 +31,8 @@
         <width>{{ channel.image_width }}</width>
         <height>{{ channel.image_height }}</height>
     </image>
-    <itunes:subtitle><![CDATA[{{ channel.subtitle }}]]></itunes:subtitle>
-    <itunes:summary><![CDATA[{{ channel.description }}]]></itunes:summary>
+    <itunes:subtitle>{{ channel.subtitle }}</itunes:subtitle>
+    <itunes:summary>{{ channel.description }}</itunes:summary>
     <itunes:keywords>{{ channel.keywords }}</itunes:keywords>
     {% for category in channel.categories %}
     <itunes:category text="{{ category }}" />{% endfor %}
@@ -49,14 +49,14 @@
         <link>{{ item.link }}</link>
         <pubDate>{{ item.pub_date }}</pubDate>
         <dc:creator>{{ item.author_name }}</dc:creator>
-        {% for category in item.categories %}<category><![CDATA[{{ category }}]]></category>{% endfor %}
+        {% for category in item.categories %}<category>{{ category }}</category>{% endfor %}
         <guid isPermaLink="false">{{ item.link }}</guid>
-        <description><![CDATA[{{ item.description }}]]]></description>
-        <content:encoded><![CDATA[{{ item.description }}]]></content:encoded>
+        <description>{{ item.description }}]</description>
+        <content:encoded>{{ item.description }}</content:encoded>
         <enclosure url="{{ item.media_url }}" length="{{ item.length }}" type="{{ item.mime_type }}" />
         <itunes:duration>{{ item.it_duration }}</itunes:duration>
-        <itunes:subtitle><![CDATA[{{ item.subtitle }}]]></itunes:subtitle>
-        <itunes:summary><![CDATA[{{ item.description }}]]></itunes:summary>
+        <itunes:subtitle>{{ item.subtitle }}</itunes:subtitle>
+        <itunes:summary>{{ item.description }}</itunes:summary>
         {% for keyword in item.keywords %}<itunes:keywords>{{ keyword }}</itunes:keywords>{% endfor %}
         <itunes:author>{{ item.author_name }}</itunes:author>
         <itunes:explicit>no</itunes:explicit>

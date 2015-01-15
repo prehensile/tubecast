@@ -272,10 +272,13 @@ def feed( path ):
         #TODO: better error handling
         abort(500)
     
-    return render_template( "feed_itunes.xml",
+    rendered = render_template( "feed_itunes.xml",
                             channel=channel,
-                            items=items,
-                            mimetype="application/xml" )
+                            items=items )
+    
+    return Response( response=rendered,
+                    status=200,
+                    mimetype="application/xml")
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
