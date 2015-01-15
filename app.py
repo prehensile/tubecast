@@ -153,6 +153,13 @@ def format_date( datestring ):
     dt = datetime.datetime.strptime( datestring, "%Y-%m-%dT%H:%M:%S.%fZ" )
     return utils.formatdate( time.mktime(dt.timetuple()) )
 
+def parse_categories( tag ):
+    categories = tag.find_all( "category", scheme="http://gdata.youtube.com/schemas/2007/categories.cat" )
+    # categories_out = []
+    # for category in categories:
+    #     categories_out.append( category.attrs["term"] )
+    return [ category.attrs["term"] for category in categories ]
+
 def parse_playlist( playlist_id ):
 
     feed_url = "http://gdata.youtube.com/feeds/api/playlists/" + playlist_id
@@ -168,11 +175,22 @@ def parse_playlist( playlist_id ):
 
     channel_out["self_url"] = url_for( "feed", path=playlist_id, _external=True )
     channel_out["title"] = feed.find("title").string
+    channel_out["subtitle"] = feed.find("subtitle").string
     channel_out["link"] = feed.find( "link", rel="alternate" ).attrs["href"]
     channel_out["description"] = feed.find("subtitle").string
     channel_out["last_updated"] = format_date( feed.find("updated").string )
     channel_out["author"] = channel_author
     channel_out["author_name"] = channel_author.find("name").text
+    channel_out["admin_email"] = "tubecast@prehensile.net"
+
+    thumbnail = feed.find("media:group").find( "media:thumbnail", attrs={ "yt:name" : "hqdefault" } )
+    channel_out["image_url"] = thumbnail["url"]
+    channel_out["image_width"] = thumbnail["width"]
+    channel_out["image_height"] = thumbnail["height"]
+
+    channel_out["keywords"] = ",".join([ "tubecast" ])
+    channel_out["categories"] = parse_categories( feed )
+
 
     for entry_tag in soup.find_all( "entry" ):
 
@@ -192,16 +210,19 @@ def parse_playlist( playlist_id ):
         
         # construct item dict
         this_item["title"] = entry_tag.find("title").string
+        this_item["subtitle"] = ""
         this_item["pub_date"] = format_date( entry_tag.find("published").string )
         this_item["guid"] = entry_tag.find("id").string
         this_item["content"] = entry_tag.find("content").string
         
         this_item["link"] = entry_tag.find( "link", rel="alternate" ).attrs["href"]
         this_item["media_url"] = url_for( "stream", path=yt_id, _external=True )
+        this_item["length"] = 0
 
         this_item["author"] = item_author
         this_item["author_name"] = item_author.find("name").text
-        this_item["categories"] = entry_tag.find_all("category")
+        
+        this_item["keywords"] = this_item["categories"] = parse_categories( entry_tag )
 
         this_item["duration"] = item_duration
         this_item["description"] = media_group.find( "media:description" ).string
@@ -230,7 +251,7 @@ def feed( path ):
         #TODO: better error handling
         abort(500)
     
-    return render_template( "feed.xml",
+    return render_template( "feed_itunes.xml",
                             channel=channel,
                             items=items )
 
