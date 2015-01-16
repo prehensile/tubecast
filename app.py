@@ -9,7 +9,7 @@ import datetime, time
 from email import utils
 from werkzeug.wrappers import Response as ResponseBase
 from itunes_categories import valid_categories
-from feedgen.feed import FeedGenerator
+
 
 MP3_BITRATE_K = 128
 # AUDIO_FORMAT = "mp3"
