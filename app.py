@@ -120,7 +120,6 @@ class StreamingResponse( ResponseBase ):
         print "kill_threads FINISHED"
 
 app = Flask(__name__)
-app.debug = True
 
 @app.route('/')
 def index():
@@ -314,7 +313,7 @@ def parse_playlist( playlist_id ):
         this_item["duration"] = item_duration
         this_item["description"] = item_description
 
-        this_item["mime_type"] = app.config["MIME_TYPE"]
+        this_item["mime_type"] = MIME_TYPE
         this_item["it_duration"] = format_duration( item_duration )
         this_item["filesize"] = get_filesize( item_duration )
         
@@ -338,9 +337,10 @@ def feed( path ):
 
     try:
         channel, items = parse_playlist( playlist_id )
-    except Exception:
+    except Exception, e:
         #TODO: better error handling
-        abort(500)
+        raise( e )
+        #abort(500)
     
     rendered = render_template( "feed.xml",
                             channel=channel,
@@ -357,4 +357,5 @@ if __name__ == '__main__':
         print channel
         print items
     else:
+        app.debug = True
         app.run()
